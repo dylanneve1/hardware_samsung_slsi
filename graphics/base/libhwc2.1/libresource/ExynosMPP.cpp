@@ -137,7 +137,7 @@ ExynosMPP::ExynosMPP(ExynosResourceManager* resourceManager,
     mReservedDisplay(-1),
     mAllocator(NULL),
     mMapper(NULL),
-    mResourceManageThread(this),
+    mResourceManageThread(android::sp<ResourceManageThread>::make(this)),
     mCapacity(-1),
     mUsedCapacity(0),
     mAllocOutBufFlag(true),
@@ -224,8 +224,8 @@ ExynosMPP::ExynosMPP(ExynosResourceManager* resourceManager,
     mAssignedSources.clear();
     resetUsedCapacity();
 
-    mResourceManageThread.mRunning = true;
-    mResourceManageThread.run("MPPThread");
+    mResourceManageThread->mRunning = true;
+    mResourceManageThread->run("MPPThread");
 
     memset(&mPrevFrameInfo, 0, sizeof(mPrevFrameInfo));
     for (int i = 0; i < NUM_MPP_SRC_BUFS; i++) {
@@ -255,8 +255,8 @@ ExynosMPP::ExynosMPP(ExynosResourceManager* resourceManager,
 
 ExynosMPP::~ExynosMPP()
 {
-    mResourceManageThread.mRunning = false;
-    mResourceManageThread.requestExitAndWait();
+    mResourceManageThread->mRunning = false;
+    mResourceManageThread->requestExitAndWait();
 
     for (uint32_t i = 0; i < NUM_MPP_SRC_BUFS; i++)
     {
@@ -953,7 +953,7 @@ int32_t ExynosMPP::setOutBuf(buffer_handle_t outbuf, int32_t fence, ExynosDispla
  * @return int32_t
  */
 int32_t ExynosMPP::freeOutBuf(struct exynos_mpp_img_info dst) {
-    mResourceManageThread.addFreedBuffer(dst);
+    mResourceManageThread->addFreedBuffer(dst);
     dst.bufferHandle = NULL;
     return NO_ERROR;
 }
@@ -1880,7 +1880,7 @@ int32_t ExynosMPP::requestHWStateChange(uint32_t state)
         mHWState = MPP_HW_STATE_RUNNING;
     else if (state == MPP_HW_STATE_IDLE) {
         if (mLastStateFenceFd >= 0)
-            mResourceManageThread.addStateFence(mLastStateFenceFd);
+            mResourceManageThread->addStateFence(mLastStateFenceFd);
         else
             mHWState = MPP_HW_STATE_IDLE;
         mLastStateFenceFd = -1;
